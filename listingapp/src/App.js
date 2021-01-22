@@ -6,6 +6,7 @@ import axios from 'axios';
 
 import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
+import Table from 'react-bootstrap/Table'
 
 class App extends React.Component{
   
@@ -16,18 +17,57 @@ class App extends React.Component{
       beanies: null,
       facemasks: null,
       gloves: null,
-
+      
     }
+    this.stockRegex = /<INSTOCKVALUE>(.*)<\/INSTOCKVALUE>/
+    this.manufacturerAV = []
     
   }
 
+// fetchAvailability = async (manufacturer) =>{
+//   let config = {
+//     headers: {
+//       'Access-Control-Allow-Origin': "*"
+//     }
+//   }
+  
+//   let returnAV
+//   let axiosPass = true;
+//   //check if manufacturer is already fetched before
+//   this.manufacturerAV.every(manufac =>{
+//     if(manufac.manufacturer === manufacturer){     
+//       returnAV = manufac.data
+//       axiosPass = false;
+//       return false;
+//     }
+//     return true;
+//   })
+  
+//   //console.log(manufacturer)
+//   if(axiosPass){
+//     await axios.get('/v2/availability/'+ manufacturer, config)
+//     .then(res => {
+//       if(res.status === 200){
+//         this.manufacturerAV.push({"manufacturer": manufacturer, "data": res.data.response})
+//         returnAV = res.data.response
+//       }
+//     }).catch(error =>{
+//       return console.log(error)
+//     })
+//   }
+//   return returnAV
+// }
+
+
 fetchCategories = () =>{
-  let categories = ["gloves", "facemasks", "beanies"]
+  let categories = ["gloves", "beanies", "facemasks"]
   let config = {
-    headers: {'Access-Control-Allow-Origin': "*"}
+    headers: {
+      'Access-Control-Allow-Origin': "*"
+    }
   }
-  categories.forEach(async (category) => {  
-    await axios.get('/v2/products/' + category, config)
+  categories.forEach(category => {  
+    axios.get('/v2/products/' + category, config)
     .then(res=>{
       switch(category){
         case "beanies":
@@ -36,15 +76,26 @@ fetchCategories = () =>{
               beanies: res.data
             })
           }
-          console.log(this.state.beanies)
+          
           return;
         case "gloves":
+          // let glovesCtgry = res.data;
+          
+          // glovesCtgry.forEach((gloves, index) =>{
+          //   let productAvblty = this.fetchAvailability(gloves.manufacturer)
+          //   console.log(productAvblty)
+          //   productAvblty.forEach(element => {
+          //     if(gloves.id === element.id){
+          //       glovesCtgry[index]["stockvalue"] = element.DATAPAYLOAD.match(this.stockRegex[1])
+          //     }
+          //   });
+            
+          // })
           if(this.state.gloves == null){
             this.setState({
               gloves: res.data
             })
           }
-          console.log(this.state.gloves)
           return;
         case "facemasks":
           if(this.state.facemasks == null){
@@ -52,7 +103,7 @@ fetchCategories = () =>{
               facemasks: res.data
             })
           }
-          console.log(this.state.facemasks)
+         
           return;
         default:
           return
@@ -60,7 +111,7 @@ fetchCategories = () =>{
       
     })
     .catch(error => {
-      console.log(error.response.status, error.message)
+      console.log(error.status, error.message)
     })
     
   });
@@ -81,7 +132,7 @@ getCategoryInfo = () =>{
         <tr id={index}>
           <td key="id">{value.id}</td>
           <td key="name">{value.name}</td>
-          <td key="color">{value.color}</td>
+          <td key="color">{value.color.join(", ")}</td>
           <td key="price">{value.price}</td>
           <td key="manufacturer">{value.manufacturer}</td>
         </tr>
@@ -94,7 +145,7 @@ getCategoryInfo = () =>{
         <tr id={index}>
           <td key="id">{value.id}</td>
           <td key="name">{value.name}</td>
-          <td key="color">{value.color}</td>
+          <td key="color">{value.color.join(", ")}</td>
           <td key="price">{value.price}</td>
           <td key="manufacturer">{value.manufacturer}</td>
         </tr>
@@ -107,7 +158,7 @@ getCategoryInfo = () =>{
         <tr id={index}>
           <td key="id">{value.id}</td>
           <td key="name">{value.name}</td>
-          <td key="color">{value.color}</td>
+          <td key="color">{value.color.join(", ")}</td>
           <td key="price">{value.price}</td>
           <td key="manufacturer">{value.manufacturer}</td>
         </tr>
@@ -125,7 +176,7 @@ componentDidMount = () => {
 }
 
   render(){
-    let category=<tr><th>No data yet</th></tr>;
+    let category=<h6>Data is being fetched. Wait few seconds or press one of the category buttons on the top.</h6>;
     if(this.state.gloves && this.state.beanies && this.state.facemasks){
       category = this.getCategoryInfo()
     }
@@ -136,19 +187,18 @@ componentDidMount = () => {
             <Button id="beanies" onClick={this.changeCategory}>Beanies</Button>
             <Button id="facemasks" onClick={this.changeCategory}>Facemasks</Button>
             <Button id="gloves" onClick={this.changeCategory}>Gloves</Button>
-            <p>{this.state.currCategory}</p>
           </div>
           <div className="table">
-            <table>
+          <Table striped bordered hover>
               <tr>
                 <th>ID</th>
-                <th>{this.state.currCategory} name</th>
-                <th>Color</th>
-                <th>Price</th>
+                <th>{this.state.currCategory.charAt(0).toUpperCase() + this.state.currCategory.slice(1)} name</th>
+                <th>Color(s)</th>
+                <th>Price €</th>
                 <th>Manufacturer</th>
               </tr>
               {category}
-            </table>
+          </Table>
             
           </div>
         </div>
@@ -158,28 +208,5 @@ componentDidMount = () => {
     )
   }
 }
-
-
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <header className="App-header">
-//         <img src={logo} className="App-logo" alt="logo" />
-//         <p>
-//           Edit <code>src/App.js</code> and save <code>&lt;code&gt;</code>to  reload.
-//         </p>
-//         <a
-//           className="App-link"
-//           href="https://reactjs.org"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           Learn React
-//         </a>
-//       </header>
-//     </div>
-//   );
-// }
 
 export default App;
