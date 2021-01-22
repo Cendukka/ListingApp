@@ -184,22 +184,21 @@ componentDidMount = () => {
       <Container>
         <div className="row">
           <div className="buttons">
-            <Button id="beanies" onClick={this.changeCategory}>Beanies</Button>
-            <Button id="facemasks" onClick={this.changeCategory}>Facemasks</Button>
-            <Button id="gloves" onClick={this.changeCategory}>Gloves</Button>
+            <Button class="button" id="beanies" onClick={this.changeCategory}>Beanies</Button>
+            <Button class="button" id="facemasks" onClick={this.changeCategory}>Facemasks</Button>
+            <Button class="button" id="gloves" onClick={this.changeCategory}>Gloves</Button>
           </div>
           <div className="table">
-          <Table striped bordered hover>
-              <tr>
-                <th>ID</th>
-                <th>{this.state.currCategory.charAt(0).toUpperCase() + this.state.currCategory.slice(1)} name</th>
-                <th>Color(s)</th>
-                <th>Price €</th>
-                <th>Manufacturer</th>
-              </tr>
-              {category}
-          </Table>
-            
+            <Table striped bordered hover>
+                <tr>
+                  <th>ID</th>
+                  <th>{this.state.currCategory.charAt(0).toUpperCase() + this.state.currCategory.slice(1)} name</th>
+                  <th>Color(s)</th>
+                  <th>Price €</th>
+                  <th>Manufacturer</th>
+                </tr>
+                {category}
+            </Table>
           </div>
         </div>
       </Container>
