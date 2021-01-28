@@ -30,10 +30,13 @@
 
 @keyframes App-logo-spin {
   from {
-    transform: rotate(0deg);
+    transform: scale(1);
+  }
+  50%{
+    transform: scale(0.1)
   }
   to {
-    transform: rotate(360deg);
+    transform: rotate(1);
   }
 }
 table{
@@ -41,7 +44,7 @@ table{
 }
 th{
   position: sticky;
-  top: 35px;
+  top: 0px;
   background-color: white;
 }
 .buttons{
@@ -49,4 +52,14 @@ th{
   top: 0;
   margin-bottom:10px;
   z-index: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .buttonLink {
+    animation: App-logo-spin infinite 5s linear alternate;
+  }
+}
+#avErrorSpan{
+  padding-left: 10px;
+  color:red;
 }
