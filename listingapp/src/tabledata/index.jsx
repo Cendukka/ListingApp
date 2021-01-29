@@ -1,16 +1,12 @@
 import React from 'react';
 import Button from 'react-bootstrap/Button'
 import '../App.css';
-import InfiniteScroll from 'react-infinite-scroll-component'
 
+//the table list component
+//Map the given props to generate table of data
 export default function Tabledata(props){
     
     return(
-        // <InfiniteScroll
-        //     dataLength={2}
-        //     hasMore={true}
-        //     loader={<h4>Loading...</h4>}
-        // >
             <table>
                 <thead>
                     <tr key="thead">
@@ -20,8 +16,7 @@ export default function Tabledata(props){
                     </tr>
                 </thead>
                 <tbody>
-                    {props.categoryData.map((td,index)=>(
-                        
+                    {props.categoryData ? props.categoryData.map((td,index)=>(
                         <tr key={index}>
                             <td>{td.id}</td>
                             <td>{td.name}</td>
@@ -31,10 +26,12 @@ export default function Tabledata(props){
                             {td.availability ? <td>{td.availability}</td> : <td><Button id={"button"+td.manufacturer+index} onClick={(event) => props.fetchAvailability(td.manufacturer, td.id,event)}>Fetch availability</Button></td>}
                             
                         </tr>
-                    ))}
+                    ))
+                    :
+                    <td key="noData"><tr>There was no category data. Try refresing page.</tr></td>
+                }
                     
                 </tbody>
             </table>
-        // </InfiniteScroll>
     )
 }
