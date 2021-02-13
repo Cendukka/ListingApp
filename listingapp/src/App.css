@@ -18,7 +18,7 @@ table{
 }
 th{
   position: sticky;
-  top: 0px;
+  top: 4%;
   background-color: white;
 }
 .buttons{
@@ -27,7 +27,9 @@ th{
   margin-bottom:10px;
   z-index: 1;
 }
-
+#cacheWarningDiv{
+  border: 4px dotted red;
+}
 
 .buttonLink {
   

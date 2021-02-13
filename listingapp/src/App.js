@@ -22,6 +22,7 @@ class App extends React.Component{
       gloves: null,                                               //Gloves category
     }
     this.stockRegex = /<INSTOCKVALUE>(.*)<\/INSTOCKVALUE>/            //Regex to pick availavility from response
+    this.manufacturerUrlRegex = /availability\/(.*)/
     this.fetchedManufacturers = []                                           //Array to hold manufacturers
     this.manufacturerAV= []                                           //To hold fetched manufacturers' availability
     this.error = false;                                               //Error token
@@ -31,7 +32,7 @@ class App extends React.Component{
   
   //getter: Get wanted category
   getCategory = (category) =>{
-    console.log(this.state.currCategory)
+    console.log("getCategory")
     switch(category){
       case "beanies":
         return this.state.beanies;
@@ -84,7 +85,8 @@ class App extends React.Component{
     
   }
   //Fetch the avaialability information from the API
-  fetchAvailability = (manufacturersArray, tempCategory) =>{
+  fetchAvailability = (manufacturersArray, tempCategories) =>{
+    
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*"  //for passing CORS policy
@@ -96,21 +98,29 @@ class App extends React.Component{
     })
 
     this.fetchAVErrorMsg = null
-    let avData;
-    
+    let avData, manufacturer;
+    console.log(axiosGet)
     axios.all(axiosGet)
-      .then(res => { 
-        console.log(res)
-        avData = res.data.response;
+      .then(resArrObj => { 
+        console.log(resArrObj)
+        resArrObj.forEach(res =>{
+          if(res.status === 200){
+            if(Array.isArray(res.data.response)){
+            manufacturer = res.request.responseURL.match(this.manufacturerUrlRegex)[1]
+            localStorage.getItem("isCacheAgreed") && localStorage.setItem(manufacturer, JSON.stringify(res.data.response)) //save the response as an object to localstorage
+
+            }else{
+              this.fetchAVErrorMsg = "Received no availability data from "+manufacturer+" manufacturer."
+              this.error = true
+            }
+          }
+          else if(res.status === 404){
+            this.fetchAVErrorMsg = "Availability of the manufacturer's product wasn't found. Try again."
+            this.error = true
+          }
+        })
         // if(res.status === 200){
-        //   if(res.data.response.length && typeof res.data.response != "string"){
-        //     this.manufacturerAV.push({"manufacturer": manufacturer, "data": res.data.response}) //save the response as an object to array
-        //   }else{ 
-            
-        //     this.fetchAVErrorMsg += "Fetching "+manufacturer+" received nothing. "  //if received nothing, show error message
-        //     avData = null
-            
-        //   }
+        //   
         //  }//else if(res.status === 404){
           
       //       this.fetchAVErrorMsg = "Availability of the manufacturer's product wasn't found. Try again."
@@ -140,6 +150,8 @@ class App extends React.Component{
     }
     let tempCategory;                                                 //variable to hold data of the response
     let manufacToBeFetched = [];                                      //array to save manufacturers that needs to be fetched
+    let tempCategories = [];
+    let axiosPass
     //axios.all get promises
     let axiosGet = []                                                 
     categoryNameArray.forEach((category) =>{
@@ -152,31 +164,19 @@ class App extends React.Component{
         console.log(resArr.data[0].type)
         if (resArr.status === 200) {         
           tempCategory = resArr.data;                      //1. Save the receiveddata in temp variable
+          tempCategories.push({"key": resArr.data[0].type, "data": tempCategory})
           tempCategory.forEach(product =>{                //2. Check the manfufacturers
             if(!this.fetchedManufacturers.includes(product.manufacturer)){
               this.fetchedManufacturers.push(product.manufacturer)  //3.1. If manufacturers array doesn't have manufacturer, add it
               manufacToBeFetched.push(product.manufacturer)          //3.2. Add manufacturer also to fetching list
             }
           })
-        
         this.setCategory(resArr.data[0].type,tempCategory);
-        // tempCategory.forEach((product, index) => {
-        //   axiosPass = true; //3. set axios pass true
-        //   this.manufacturerAV.every(manufac => {
-        //     if (manufac.manufacturer === product.manufacturer) { //5. check if any object match 
-        //       axiosPass = false; //6. deny axios fetch if manufacturer already fetched
-        //       this.addAvailability(manufac.data, tempCategory, index); //7.1. Add availability
-        //       return false;
-        //     }
-        //     return true;
-        //   });
-        //   axiosPass && this.fetchAvailability(product.manufacturer, tempCategory, index); //7.2. fetch manufacturers availability
-        // });
       }
     })
-    })/*.then(()=>{
-      tempManufacturers.length && this.fetchAvailability(tempManufacturers, tempCategory)//4. fetch the availability
-    })*/
+    }).then(()=>{
+      this.fetchAvailability(manufacToBeFetched, tempCategories); //7.2. fetch manufacturers availability
+    })
     .catch(error => {
         this.fetchCGErrorMsg = "Server was unavailable"
       console.log(error.status, error.message);
@@ -190,6 +190,7 @@ class App extends React.Component{
     
   }
   setCategory = (categoryName, catData) => {
+    console.log("setCategory")
     switch(categoryName){
       case "beanies":
         this.setState({
@@ -225,6 +226,16 @@ class App extends React.Component{
     return(
       <Container>
         <div className="row">
+          <div id="cacheWarningDiv" style={localStorage.getItem("isCacheAgreed") ? {"display":"none"} : {"display":"block"}}>
+            <span className="cacheInfo">
+              This website uses localstorage cache to save category and availability data. Press OK to agree that the page saves data to localstorage.
+            </span>
+            <Button className="button" onClick={() =>{
+              document.getElementById('cacheWarningDiv').style.display = "none"
+              localStorage.setItem("isCacheAgreed", true)
+              }}>Ok
+            </Button>
+          </div>
           <div className="buttons">
             <Button className="button" value="beanies" id="getBeaniesButton" onClick={this.changeCategory}>Beanies</Button>
             <Button className="button" value="facemasks" id="getFacemasksButton" onClick={this.changeCategory}>Facemasks</Button>
