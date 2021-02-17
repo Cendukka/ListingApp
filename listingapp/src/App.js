@@ -45,42 +45,41 @@ class App extends React.Component{
     }
   }
   //Function for finding the correct availability for selected product
-  addAvailability =  (category, avData) =>{
-    
-    let tempCategory = category
-    tempCategory.forEach((product, pIndex)=>{
-      avData && avData.every((data, avIndex)=>{
-        if(product.id === data.id){
-          tempCategory[pIndex].availability = data.DATAPAYLOAD.match(this.stockRegex)[1]
-          return false
-        }
-        console.log(pIndex)
-        return true
+  addAvailability =  (productCategories, avDataArray) =>{
+    let tempProductCategories = productCategories
+    let tempAvDataArray = avDataArray
+    console.log("foreach starts...")
+    let counter = 0; 
+    // console.log(productCategories, avDataArray)
+    tempProductCategories.forEach((productCategory)=>{
+      // console.log(productCategory.data)
+      productCategory.data.forEach(product=>{
+       //console.log(product)
+        tempAvDataArray.every(AvData => {
+          // console.log("Third foreach")
+          AvData.every(AV =>{
+            let AVID = AV.id.toLowerCase()
+            let productID = product.id
+            if(AVID === productID){
+              product["availability"] = AV.DATAPAYLOAD.match(this.stockRegex)[1]
+              
+              return false
+            }
+            return true
+          })
+          return true
+        })
       })
-    },()=>{
-      console.log("menee")
-        switch(category.type){
-          case "beanies":
-            this.setState({
-              currCategory: "beanies",
-              beanies: tempCategory
-            })
-            return
-          case "facemasks":
-            this.setState({
-              currCategory: "facemasks",
-              facemasks: tempCategory
-            })
-            return 
-          case "gloves":
-            this.setState({
-              currCategory: "gloves",
-              gloves: tempCategory
-            })
-            return 
-          default:
-            return <p>No current caregory selected. Try pressing the button or reload the window</p>
-        }
+       ++counter
+      console.log(counter)
+       if(counter >= productCategories.length){
+        
+        tempProductCategories.forEach(productCategory=>{
+          this.setCategory(productCategory.data[0].type, productCategory.data)
+          //console.log(productCategory.data)
+        })
+        
+      }
     })
     
   }
@@ -98,7 +97,7 @@ class App extends React.Component{
     })
 
     this.fetchAVErrorMsg = null
-    let avData, manufacturer;
+    let avData = [], manufacturer;
     console.log(axiosGet)
     axios.all(axiosGet)
       .then(resArrObj => { 
@@ -107,11 +106,11 @@ class App extends React.Component{
           if(res.status === 200){
             if(Array.isArray(res.data.response)){
             manufacturer = res.request.responseURL.match(this.manufacturerUrlRegex)[1]
-            localStorage.getItem("isCacheAgreed") && localStorage.setItem(manufacturer, JSON.stringify(res.data.response)) //save the response as an object to localstorage
-
+            localStorage.getItem("isCacheAgreed") && localStorage.setItem(manufacturer, res.data.response) //save the response as an object to localstorage
+            avData.push(res.data.response)
             }else{
-              this.fetchAVErrorMsg = "Received no availability data from "+manufacturer+" manufacturer."
-              this.error = true
+              this.fetchAVErrorMsg += "Received no availability data from "+manufacturer+" manufacturer. "
+              
             }
           }
           else if(res.status === 404){
@@ -119,20 +118,10 @@ class App extends React.Component{
             this.error = true
           }
         })
-        // if(res.status === 200){
-        //   
-        //  }//else if(res.status === 404){
-          
-      //       this.fetchAVErrorMsg = "Availability of the manufacturer's product wasn't found. Try again."
-          
-      //     this.error = true
-      //   }else if(res.status === 503){
-          
-      //       this.fetchAVErrorMsg = "Server was unavailable. Try again."
-          
-      //     this.error = true
-      //   }
-       })//.then(()=> !this.error && this.addAvailability(tempCategory, avData))
+       })
+       .then(()=>{
+        !this.error && this.addAvailability(tempCategories, avData)
+       })
       .catch(error =>{
         
           this.fetchAVErrorMsg = "Server was unavailable. Try again."
