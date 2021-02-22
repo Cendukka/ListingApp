@@ -85,15 +85,17 @@ class App extends React.Component{
   }
   //Fetch the avaialability information from the API
   fetchAvailability = (manufacturersArray, tempCategories) =>{
-    
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*"  //for passing CORS policy
       }
     }
+    //Axios.get requests
     let axiosGet = []
     manufacturersArray.forEach((manufacturer) =>{
-      axiosGet.push(axios.get('/v2/availability/'+ manufacturer, config))
+      if(!this.getLocalStorageWithExpiry(manufacturer)){
+        axiosGet.push(axios.get('/v2/availability/'+ manufacturer, config))
+      }
     })
 
     this.fetchAVErrorMsg = null
@@ -101,7 +103,6 @@ class App extends React.Component{
     console.log(axiosGet)
     axios.all(axiosGet)
       .then(resArrObj => { 
-        console.log(resArrObj)
         resArrObj.forEach(res =>{
           if(res.status === 200){
             if(Array.isArray(res.data.response)){
@@ -134,42 +135,61 @@ class App extends React.Component{
   fetchCategories = (categoryNameArray) =>{
     let config = {
       headers: {
-        'Access-Control-Allow-Origin': "*"
+        'Access-Control-Allow-Origin': "*" //for passing CORS policy
       }
     }
-    let tempCategory;                                                 //variable to hold data of the response
-    let manufacToBeFetched = [];                                      //array to save manufacturers that needs to be fetched
-    let tempCategories = [];
-    let axiosPass
+    let tempCategory;               //variable to hold data of the response
+    let manufacToBeFetched = [];    //array to save manufacturers that needs to be fetched
+    let tempCategories = [];        //array to save all fetched categories where availability information is added
+
     //axios.all get promises
     let axiosGet = []                                                 
     categoryNameArray.forEach((category) =>{
-      axiosGet.push(axios.get('/v2/products/'+ category, config))
+      if(!this.getLocalStorageWithExpiry(category)){
+        axiosGet.push(axios.get('/v2/products/'+ category, config))
+      }
+       else{
+         let storageCategory = this.getLocalStorageWithExpiry(category)
+         tempCategories.push({"key": category, "data": storageCategory })
+         storageCategory.forEach(product =>{                                        
+           if(!manufacToBeFetched.includes(product.manufacturer)){
+             manufacToBeFetched.push(product.manufacturer)    
+                             
+           }
+         })
+         this.setCategory(category, storageCategory);
+       }
+       
     })
     
-    axios.all(axiosGet)
-    .then(resArrObj => {
-      resArrObj.forEach(resArr => {
-        console.log(resArr.data[0].type)
-        if (resArr.status === 200) {         
-          tempCategory = resArr.data;                      //1. Save the receiveddata in temp variable
-          tempCategories.push({"key": resArr.data[0].type, "data": tempCategory})
-          tempCategory.forEach(product =>{                //2. Check the manfufacturers
-            if(!this.fetchedManufacturers.includes(product.manufacturer)){
-              this.fetchedManufacturers.push(product.manufacturer)  //3.1. If manufacturers array doesn't have manufacturer, add it
-              manufacToBeFetched.push(product.manufacturer)          //3.2. Add manufacturer also to fetching list
-            }
-          })
-        this.setCategory(resArr.data[0].type,tempCategory);
-      }
-    })
-    }).then(()=>{
-      this.fetchAvailability(manufacToBeFetched, tempCategories); //7.2. fetch manufacturers availability
-    })
-    .catch(error => {
+    if(axiosGet.length){
+      axios.all(axiosGet)
+      .then(resArrObj => {
+        resArrObj.forEach(resArr => {
+          if (resArr.status === 200) {         
+            tempCategory = resArr.data;                                             //1. Save the received data in temp variable
+            let categoryType = resArr.data[0].type                                    
+            tempCategories.push({"key": categoryType, "data": tempCategory})        //2. Save the received data in array for availability fetching
+            this.setLocalStorageWithExpiry(categoryType, tempCategory, 300000)      //3. Save the category in localstorage
+            tempCategory.forEach(product =>{                                        //4. Check the manufacturers
+              if(!manufacToBeFetched.includes(product.manufacturer)){
+                manufacToBeFetched.push(product.manufacturer)                       //5. Add manufacturer to fetching list
+              }
+            })
+          this.setCategory(resArr.data[0].type,tempCategory);                       //6. Set categories in state
+        }
+      })
+      }).then(()=>{
+        this.fetchAvailability(manufacToBeFetched, tempCategories);                 //7. fetch manufacturers availability
+      })
+      .catch(error => {
         this.fetchCGErrorMsg = "Server was unavailable"
-      console.log(error.status, error.message);
-    });
+        console.log(error.status, error.message);
+      });
+    }else{
+      //this.fetchAvailability(manufacToBeFetched, tempCategories);
+      console.log(manufacToBeFetched, tempCategories)
+    }
   }
 //to change current category
   changeCategory = (category) => {
@@ -208,8 +228,25 @@ class App extends React.Component{
     this.fetchCategories(["beanies","gloves","facemasks"]); //fetch categories
   }
 
-  fetchAVAgain = () =>{
-
+  setLocalStorageWithExpiry = (key, value, ttl) => {
+    const timeNow = new Date()
+    const data = {
+      value: value,
+      expiry: timeNow.getTime() +  ttl,
+    }
+    localStorage.setItem(key, JSON.stringify(data))
+  }
+  getLocalStorageWithExpiry = (key) => {
+    const timeNow = new Date()
+    const storageDataStr = localStorage.getItem(key)
+    if (!storageDataStr) {return null}
+    const storageData = JSON.parse(storageDataStr)
+    if(timeNow.getTime() > storageData.expiry){
+      localStorage.removeItem(key)
+      return null
+    }
+    
+    return storageData.value
   }
   render(){
     return(
