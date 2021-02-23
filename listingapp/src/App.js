@@ -85,6 +85,7 @@ class App extends React.Component{
   }
   //Fetch the avaialability information from the API
   fetchAvailability = (manufacturersArray, tempCategories) =>{
+    
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*"  //for passing CORS policy
@@ -93,43 +94,43 @@ class App extends React.Component{
     //Axios.get requests
     let axiosGet = []
     manufacturersArray.forEach((manufacturer) =>{
-      if(!this.getLocalStorageWithExpiry(manufacturer)){
-        axiosGet.push(axios.get('/v2/availability/'+ manufacturer, config))
-      }
+      axiosGet.push(axios.get('/v2/availability/'+ manufacturer, config))
     })
 
     this.fetchAVErrorMsg = null
     let avData = [], manufacturer;
-    console.log(axiosGet)
+    let manufacturersToFetchAgain = manufacturersArray
+    
     axios.all(axiosGet)
-      .then(resArrObj => { 
-        resArrObj.forEach(res =>{
-          if(res.status === 200){
-            if(Array.isArray(res.data.response)){
-            manufacturer = res.request.responseURL.match(this.manufacturerUrlRegex)[1]
-            localStorage.getItem("isCacheAgreed") && localStorage.setItem(manufacturer, res.data.response) //save the response as an object to localstorage
-            avData.push(res.data.response)
-            }else{
-              this.fetchAVErrorMsg += "Received no availability data from "+manufacturer+" manufacturer. "
-              
-            }
+    .then(resArrObj => { 
+      resArrObj.forEach(res =>{
+        if(res.status === 200){
+          if(Array.isArray(res.data.response)){
+          manufacturer = res.request.responseURL.match(this.manufacturerUrlRegex)[1]
+          manufacturersToFetchAgain.splice(manufacturersToFetchAgain.indexOf(manufacturer), 1)
+          this.manufacturerAV.push({"key":manufacturer, "data":  res.data.response})
+          
+          avData.push(res.data.response)
+          }else{
+            this.fetchAVErrorMsg += "Received no availability data from "+manufacturer+" manufacturer. "
           }
-          else if(res.status === 404){
-            this.fetchAVErrorMsg = "Availability of the manufacturer's product wasn't found. Try again."
-            this.error = true
-          }
-        })
-       })
-       .then(()=>{
-        !this.error && this.addAvailability(tempCategories, avData)
-       })
-      .catch(error =>{
-        
-          this.fetchAVErrorMsg = "Server was unavailable. Try again."
+        }
+        else if(res.status === 404){
+          this.fetchAVErrorMsg = "Availability of the manufacturer's product wasn't found. Try again."
           this.error = true
-        return console.log(error)
+        }
       })
-    return
+    })
+    .then(()=>{
+      !this.error && this.addAvailability(tempCategories, avData)
+    })
+    .catch(error =>{
+      
+        this.fetchAVErrorMsg = "Server was unavailable. Try again."
+        this.error = true
+      return console.log(error)
+    })
+    
   }
 //fetch categories and save them in the state
   fetchCategories = (categoryNameArray) =>{
@@ -145,51 +146,32 @@ class App extends React.Component{
     //axios.all get promises
     let axiosGet = []                                                 
     categoryNameArray.forEach((category) =>{
-      if(!this.getLocalStorageWithExpiry(category)){
-        axiosGet.push(axios.get('/v2/products/'+ category, config))
-      }
-       else{
-         let storageCategory = this.getLocalStorageWithExpiry(category)
-         tempCategories.push({"key": category, "data": storageCategory })
-         storageCategory.forEach(product =>{                                        
-           if(!manufacToBeFetched.includes(product.manufacturer)){
-             manufacToBeFetched.push(product.manufacturer)    
-                             
-           }
-         })
-         this.setCategory(category, storageCategory);
-       }
-       
+      axiosGet.push(axios.get('/v2/products/'+ category, config))
     })
     
-    if(axiosGet.length){
-      axios.all(axiosGet)
-      .then(resArrObj => {
-        resArrObj.forEach(resArr => {
-          if (resArr.status === 200) {         
-            tempCategory = resArr.data;                                             //1. Save the received data in temp variable
-            let categoryType = resArr.data[0].type                                    
-            tempCategories.push({"key": categoryType, "data": tempCategory})        //2. Save the received data in array for availability fetching
-            this.setLocalStorageWithExpiry(categoryType, tempCategory, 300000)      //3. Save the category in localstorage
-            tempCategory.forEach(product =>{                                        //4. Check the manufacturers
-              if(!manufacToBeFetched.includes(product.manufacturer)){
-                manufacToBeFetched.push(product.manufacturer)                       //5. Add manufacturer to fetching list
-              }
-            })
-          this.setCategory(resArr.data[0].type,tempCategory);                       //6. Set categories in state
-        }
-      })
-      }).then(()=>{
-        this.fetchAvailability(manufacToBeFetched, tempCategories);                 //7. fetch manufacturers availability
-      })
-      .catch(error => {
-        this.fetchCGErrorMsg = "Server was unavailable"
-        console.log(error.status, error.message);
-      });
-    }else{
-      //this.fetchAvailability(manufacToBeFetched, tempCategories);
-      console.log(manufacToBeFetched, tempCategories)
-    }
+    axios.all(axiosGet)
+    .then(resArrObj => {
+      resArrObj.forEach(resArr => {
+        if (resArr.status === 200) {         
+          tempCategory = resArr.data;                                             //1. Save the received data in temp variable
+          let categoryType = resArr.data[0].type                                    
+          tempCategories.push({"key": categoryType, "data": tempCategory})        //2. Save the received data in array for availability fetching
+          tempCategory.forEach(product =>{                                        //4. Check the manufacturers
+            if(!manufacToBeFetched.includes(product.manufacturer)){
+              manufacToBeFetched.push(product.manufacturer)                       //5. Add manufacturer to fetching list
+            }
+          })
+        this.setCategory(resArr.data[0].type,tempCategory);                       //6. Set categories in state
+      }
+    })
+    }).then(()=>{
+      this.fetchAvailability(manufacToBeFetched, tempCategories);                 //7. fetch manufacturers availability
+    })
+    .catch(error => {
+      this.fetchCGErrorMsg = "Server was unavailable"
+      console.log(error.status, error.message);
+    });
+    
   }
 //to change current category
   changeCategory = (category) => {
@@ -228,26 +210,7 @@ class App extends React.Component{
     this.fetchCategories(["beanies","gloves","facemasks"]); //fetch categories
   }
 
-  setLocalStorageWithExpiry = (key, value, ttl) => {
-    const timeNow = new Date()
-    const data = {
-      value: value,
-      expiry: timeNow.getTime() +  ttl,
-    }
-    localStorage.setItem(key, JSON.stringify(data))
-  }
-  getLocalStorageWithExpiry = (key) => {
-    const timeNow = new Date()
-    const storageDataStr = localStorage.getItem(key)
-    if (!storageDataStr) {return null}
-    const storageData = JSON.parse(storageDataStr)
-    if(timeNow.getTime() > storageData.expiry){
-      localStorage.removeItem(key)
-      return null
-    }
-    
-    return storageData.value
-  }
+  
   render(){
     return(
       <Container>
