@@ -44,14 +44,15 @@ class App extends React.Component{
         return null
     }
   }
+
+
   //Function for finding the correct availability for selected product
-  addAvailability =  (productCategories, avDataArray) =>{
+  addAvailability = async (productCategories, avDataArray) =>{
     let tempProductCategories = productCategories
     let tempAvDataArray = avDataArray
-    console.log("foreach starts...")
     let counter = 0; 
     // console.log(productCategories, avDataArray)
-    tempProductCategories.forEach((productCategory)=>{
+    await tempProductCategories.forEach((productCategory)=>{
       // console.log(productCategory.data)
       productCategory.data.forEach(product=>{
        //console.log(product)
@@ -62,7 +63,6 @@ class App extends React.Component{
             let productID = product.id
             if(AVID === productID){
               product["availability"] = AV.DATAPAYLOAD.match(this.stockRegex)[1]
-              
               return false
             }
             return true
@@ -73,9 +73,10 @@ class App extends React.Component{
        ++counter
       console.log(counter)
        if(counter >= productCategories.length){
-        
         tempProductCategories.forEach(productCategory=>{
           this.setCategory(productCategory.data[0].type, productCategory.data)
+          this.setDisable("button", "categoryButton", false)
+          this.setOrRemoveClass("button", "remove", "buttonLink")
           //console.log(productCategory.data)
         })
         
@@ -132,8 +133,11 @@ class App extends React.Component{
     })
     
   }
+  
 //fetch categories and save them in the state
   fetchCategories = (categoryNameArray) =>{
+    this.setDisable("button", "categoryButton", true)
+    this.setOrRemoveClass("button", "add", "buttonLink")
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*" //for passing CORS policy
@@ -205,7 +209,31 @@ class App extends React.Component{
         return 
     }
   }
-
+  setDisable = (element, className, bool) =>{
+    const elements = document.querySelectorAll(element)
+    elements.forEach(ele=>{
+      ele.className.includes(className) && (ele.disabled = bool)
+    })
+  }
+  setOrRemoveClass = (element="", operation="", className="") => {
+    const elements = document.querySelectorAll(element)
+    
+    switch(operation){
+      case "add":
+        elements.forEach(ele=>{
+          console.log(ele)
+          !ele.classList.contains(className) && (ele.classList.add(className))
+        })
+        return
+      case "remove":
+        elements.forEach(ele=>{
+          ele.classList.contains(className) && (ele.classList.remove(className))
+        })
+      default:
+        return
+    }
+    
+  }
   componentDidMount = () => {
     this.fetchCategories(["beanies","gloves","facemasks"]); //fetch categories
   }
@@ -226,9 +254,9 @@ class App extends React.Component{
             </Button>
           </div>
           <div className="buttons">
-            <Button className="button" value="beanies" id="getBeaniesButton" onClick={this.changeCategory}>Beanies</Button>
-            <Button className="button" value="facemasks" id="getFacemasksButton" onClick={this.changeCategory}>Facemasks</Button>
-            <Button className="button" value="gloves" id="getGlovesButton" onClick={this.changeCategory}>Gloves</Button>
+            <Button className="button categoryButton" value="beanies" id="getBeaniesButton" onClick={this.changeCategory}>Beanies</Button>
+            <Button className="button categoryButton" value="facemasks" id="getFacemasksButton" onClick={this.changeCategory}>Facemasks</Button>
+            <Button className="button categoryButton" value="gloves" id="getGlovesButton" onClick={this.changeCategory}>Gloves</Button>
             <span id="avErrorSpan" style={this.error ? {"display": "block"} : {"display": "none"}}>{this.fetchAVErrorMsg}</span>
           </div>
           <div className="table">
