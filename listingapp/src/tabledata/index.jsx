@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from 'react-bootstrap/Button'
+import _ from 'lodash'
 import '../App.css';
 
 //the table list component
@@ -10,23 +11,24 @@ export default function Tabledata(props){
             <table>
                 <thead>
                     <tr key="thead">
-                        {props.tableHeaders.map((header, index)=>{
+                        {_.map(props.tableHeaders, (header, index)=>{
                             return (<th key={index}>{header}</th>)
                         })}
                     </tr>
                 </thead>
                 <tbody>
-                    {props.categoryData ? props.categoryData.map((td,index)=>(
+                    {props.categoryData ? _.map(props.categoryData,(td,index)=>{
+                    return (
                         <tr key={index}>
                             <td>{td.id}</td>
                             <td>{td.name}</td>
                             <td>{td.color.join(", ")}</td>
                             <td>{td.price}</td>
                             <td>{td.manufacturer}</td>
-                            {td.availability ? <td>{td.availability}</td> : <td><Button id={"button"+td.manufacturer+index} onClick={(event) => props.fetchAvailability(td.manufacturer, td.id,event)}>Fetch availability</Button></td>}
+                            {td.availability ? <td>{td.availability}</td> : <td><Button id={"button"+td.manufacturer+index} className={td.manufacturer} onClick={(event) => props.fetchAvailability(td.manufacturer, td.id, event)}>Fetch availability</Button></td>}
                             
                         </tr>
-                    ))
+                    )})
                     :
                     <td key="noData"><tr>There was no category data. Try refresing page.</tr></td>
                 }
