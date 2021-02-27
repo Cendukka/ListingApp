@@ -31,18 +31,20 @@ class App extends React.Component{
     this.manufacturerAV= []                                       //To hold fetched manufacturers' availability
     this.avErrorToken = false;                                           //Error token
     this.categories = ["gloves", "facemasks", "beanies"]          //Categories to be fetched
+    this.url = 'https://bad-api-assignment.reaktor.com'
   }
 
   //1.fetch categories and save them in the state
   fetchCategories = () =>{
     let categories = this.categories
+    let url = this.url
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*",    //Pass CORS policy
       }
     }
     categories.forEach((category) => {  
-       axios.get('/v2/products/' + category, config)
+       axios.get(url+'/v2/products/' + category, config)
       .then(res=>{
         if(res.status === 200){
           switch(category){
@@ -94,7 +96,7 @@ class App extends React.Component{
     this.setState({
       fetchAVErrorMsg: ""
     })
-
+    let url = this.url
     let axiosPass = true; //Token for axios.get
     this.avErrorToken = false; //Reset error token
     let clickedButton = document.getElementById(event.target.id) //Clicked fetching button
@@ -113,7 +115,7 @@ class App extends React.Component{
     
     if(axiosPass && !clickedButton.classList.contains("processing")){ //Check if axiosPass is true and the clicked button isn't already processing get request
       this.addProcessing("button", manufacturer)
-      axios.get('/v2/availability/'+ manufacturer, config)
+      axios.get(url+'/v2/availability/'+ manufacturer, config)
       .then(res => {
 
         //Remove disabled from category buttons and fetching buttons

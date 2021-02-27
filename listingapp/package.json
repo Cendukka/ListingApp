@@ -2,8 +2,8 @@
   "name": "listingapp",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://bad-api-assignment.reaktor.com",
   "//": "for making Axios requests pass CORS policy",
+  "proxy": "https://bad-api-assignment.reaktor.com",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.3",
