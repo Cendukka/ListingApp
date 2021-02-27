@@ -2,62 +2,49 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.categoryButton{
+  margin: 0 5px 0 5px;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 1s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: scale(1);
-  }
-  50%{
-    transform: scale(0.1)
-  }
-  to {
-    transform: rotate(1);
-  }
+.C-B-Container{
+  position: sticky;
+  top: 0;
+  padding-bottom: 10px;
+  margin-bottom:10px;
+  margin-top: 5px;
+  z-index: 1;
+  border:1px solid black;
+  box-shadow: 3px 3px;
+  background-color: white;
 }
 table{
   position: relative;
 }
 th{
   position: sticky;
-  top: 0px;
+  top: 90px;
   background-color: white;
 }
-.buttons{
-  position: sticky;
-  top: 0;
-  margin-bottom:10px;
-  z-index: 1;
+
+.processing {
+  
+  /* animation: Button-Scale 2s infinite ; */
+  animation-name: Button-Scale;
+  animation-duration: 2s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .buttonLink {
-    animation: App-logo-spin infinite 5s linear alternate;
+@keyframes Button-Scale {
+  0% {
+    transform: scale(1);
+    
   }
+  50%{
+    transform: scale(0.5);
+  }
+
+  
 }
 #avErrorSpan{
   padding-left: 10px;
