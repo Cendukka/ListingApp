@@ -25,7 +25,7 @@ export default function Tabledata(props){
                             <td>{td.color.join(", ")}</td>
                             <td>{td.price}</td>
                             <td>{td.manufacturer}</td>
-                            {td.availability ? <td>{td.availability}</td> : <td><Button id={"button"+td.manufacturer+index} className={td.manufacturer} onClick={(event) => props.fetchAvailability(td.manufacturer, td.id, event)}>Fetch availability</Button></td>}
+                            {td.availability ? <td>{td.availability}</td> : <td><Button id={"button"+td.manufacturer+index} className={td.manufacturer} onClick={(event) => props.fetchAvailability(td.manufacturer, event)}>Fetch availability</Button></td>}
                             
                         </tr>
                     )})

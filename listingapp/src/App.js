@@ -19,7 +19,7 @@ class App extends React.Component{
   constructor(props){
     super(props);
     this.state = {
-      currCategory: null,                                         // Name of the selected category
+      currCategory: null,                                         //Name of the selected category
       beanies: null,                                              //Beanies category
       facemasks: null,                                            //Facemasks category
       gloves: null,                                               //Gloves category
@@ -29,109 +29,121 @@ class App extends React.Component{
     }
     this.stockRegex = /<INSTOCKVALUE>(.*)<\/INSTOCKVALUE>/        //Regex to pick availavility from response
     this.manufacturerAV= []                                       //To hold fetched manufacturers' availability
-    this.error = false;                                           //Error token
+    this.avErrorToken = false;                                           //Error token
+    this.categories = ["gloves", "facemasks", "beanies"]          //Categories to be fetched
   }
 
-  //fetch categories and save them in the state
+  //1.fetch categories and save them in the state
   fetchCategories = () =>{
-    let categories = ["gloves", "facemasks", "beanies"]
+    let categories = this.categories
     let config = {
       headers: {
-        'Access-Control-Allow-Origin': "*"    //Pass CORS policy
+        'Access-Control-Allow-Origin': "*",    //Pass CORS policy
       }
     }
     categories.forEach((category) => {  
        axios.get('/v2/products/' + category, config)
       .then(res=>{
-        switch(category){
-          case "beanies":
-            this.setState({
-              currCategory: "beanies",
-              beanies: res.data
-            });
-            return;
-          case "gloves":
+        if(res.status === 200){
+          switch(category){
+            case "beanies":
               this.setState({
-              gloves: res.data
-            });
-            return;
-          case "facemasks":
-            this.setState({
-              facemasks: res.data
-            });
-            return;
-          default:
-            return
+                currCategory: "beanies",
+                beanies: res.data
+              });
+              return;
+            case "gloves":
+                this.setState({
+                gloves: res.data
+              });
+              return;
+            case "facemasks":
+              this.setState({
+                facemasks: res.data
+              });
+              return;
+            default:
+              return
+          }
+        }
+        else{
+          this.setState({
+            fetchCGErrorMsg: "Server responsed with nothing. Try again by refreshing the page."
+          })
         }
       })
       .catch(error => {
         this.setState({
-          fetchCGErrorMsg: "Server was unavailable"
+          fetchCGErrorMsg: "The requested server was unavailable. Try again by refreshing the page."
         })
-        console.log(error.status, error.message)
       })
       
     });
   }
-  //Fetch the availability information from the API afte button is clicked
-  fetchAvailability =  (manufacturer, productID, event) =>{
+  //2.Fetch the availability information from the API afte button is clicked
+  //Params: 
+  //  manufacturer == (string) selected manufacturer's name
+  //  event == (object) event object, in this case 'click'-event
+  fetchAvailability =  (manufacturer, event) =>{
     let config = {
       headers: {
-        'Access-Control-Allow-Origin': "*"  //for passing CORS policy
+        'Access-Control-Allow-Origin': "*",  //for passing CORS policy
       }
     }
-    
+    //reset errormsg
     this.setState({
       fetchAVErrorMsg: ""
     })
 
     let axiosPass = true; //Token for axios.get
+    this.avErrorToken = false; //Reset error token
+    let clickedButton = document.getElementById(event.target.id) //Clicked fetching button
 
     // check if manufacturer is already fetched before
+    // Only necessary check if fetching was succesfull but rerendering wasn't and fetching is tried again
     this.manufacturerAV.every(manufac =>{
       if(manufac.manufacturer === manufacturer){
         axiosPass = false;
-        this.addAvailability(manufacturer, productID)
+        this.addAvailability(manufacturer)
         return false;
       }
       return true;
     })
 
-    let clickedButton = document.getElementById(event.target.id)
+    
     if(axiosPass && !clickedButton.classList.contains("processing")){ //Check if axiosPass is true and the clicked button isn't already processing get request
       this.addProcessing("button", manufacturer)
       axios.get('/v2/availability/'+ manufacturer, config)
       .then(res => {
+
+        //Remove disabled from category buttons and fetching buttons
         let categoryButtons = document.querySelectorAll("button")
         _.forEach(categoryButtons, button =>{
           if(button.classList.contains("categoryButton")){button.disabled = false}
         })
+        this.removeProcessing("button", manufacturer)
+
         if(res.status === 200){
-          if(res.data.response.length && typeof res.data.response != "string"){
-            this.manufacturerAV.push({"manufacturer": manufacturer, "data": res.data.response}) //save the response as an object to array
-            this.removeProcessing("button", manufacturer)
-          
+          if(Array.isArray(res.data.response)){
+            this.manufacturerAV.push({"manufacturer": manufacturer, "data": res.data.response}) //save the response as an object to array        
           }else{ 
-            this.removeProcessing("button", manufacturer)
             this.setState({
               fetchAVErrorMsg: "Fetching received nothing. Try again." //if received nothing, show error message
             })
-            this.error = true
+            this.avErrorToken = true
           }
         }else if(res.status === 404){
-          this.removeProcessing("button", manufacturer)
           this.setState({
             fetchAVErrorMsg: "Availability of the manufacturer's product wasn't found. Try again."
           })
-          this.error = true
+          this.avErrorToken = true
         }else if(res.status === 503){
-          this.removeProcessing("button", manufacturer)
           this.setState({
             fetchAVErrorMsg: "Server was unavailable. Try again."
           })
-          this.error = true
+          this.avErrorToken = true
         }
-      }).then(()=> !this.error && this.addAvailability(manufacturer, productID))
+      }).then(()=> !this.avErrorToken && this.addAvailability(manufacturer))
       .catch(error =>{
         this.removeProcessing("button", manufacturer)
         this.setState({
@@ -143,54 +155,44 @@ class App extends React.Component{
     return
   }
 
-  //Function for finding the correct availability for selected product
+  setAvailability = (category,manufacturer) =>{
+    let manufacturerAV = this.manufacturerAV
+    let tempCategory = category
+    _.forEach(tempCategory,(product, index)=>{ //Map through category and availability data
+      
+      _.forEach(manufacturerAV,AV=>{
+        AV.manufacturer === manufacturer && _.forEach(AV.data, avData =>{ //when wanted manufacturer is founf map through the availability data of the manufacturer
+          if(product.id === avData.id.toLowerCase()){
+            
+            tempCategory[index].availability = avData.DATAPAYLOAD.match(this.stockRegex)[1]
+          }
+        })
+      })
+    })
+    return tempCategory
+  }
+
+  //3.Function for finding the correct availability for selected product
   //
   //params: 
   //  manufacturer == (string) selected manufacturer's name
   addAvailability =  (manufacturer) =>{
-    let manufacturerAV = this.manufacturerAV
+    // let manufacturerAV = this.manufacturerAV
     switch(this.state.currCategory){
       case "beanies":
-        let beanies = this.state.beanies
-        _.forEach(beanies,(beanie, index)=>{    //Map through beanies category 
-          _.forEach(manufacturerAV,AV=>{ //if the correct beanie's id match the wanted productID map through manufacturers
-            AV.manufacturer === manufacturer && _.forEach(AV.data, avData =>{ //when wanted manufacturer is founf map through the availability data of the manufacturer
-              if(beanie.id === avData.id.toLowerCase()){
-                beanies[index].availability = avData.DATAPAYLOAD.match(this.stockRegex)[1]
-              }
-            })
-          })
-        })
+        let beanies = this.setAvailability(this.state.beanies,manufacturer)
         this.setState({
           beanies: beanies
         })
         return
       case "facemasks":
-        let facemasks = this.state.facemasks
-        _.forEach(facemasks,(facemask, index)=>{    //Map through beanies category 
-          _.forEach(manufacturerAV,AV=>{ //if the correct beanie's id match the wanted productID map through manufacturers
-            AV.manufacturer === manufacturer && _.forEach(AV.data, avData =>{ //when wanted manufacturer is founf map through the availability data of the manufacturer
-              if(facemask.id === avData.id.toLowerCase()){
-                facemasks[index].availability = avData.DATAPAYLOAD.match(this.stockRegex)[1]
-              }
-            })
-          })
-        })
+        let facemasks = this.setAvailability(this.state.facemasks,manufacturer)
         this.setState({
           facemasks: facemasks
         })
         return 
       case "gloves":
-        let gloves = this.state.gloves
-        _.forEach(gloves,(glove, index)=>{    //Map through beanies category 
-          _.forEach(manufacturerAV,AV=>{ //if the correct beanie's id match the wanted productID map through manufacturers
-            AV.manufacturer === manufacturer && _.forEach(AV.data, avData =>{ //when wanted manufacturer is founf map through the availability data of the manufacturer
-              if(glove.id === avData.id.toLowerCase()){
-                gloves[index].availability = avData.DATAPAYLOAD.match(this.stockRegex)[1]
-              }
-            })
-          })
-        })
+        let gloves = this.setAvailability(this.state.gloves,manufacturer)
         this.setState({
           gloves: gloves
         })
@@ -198,13 +200,12 @@ class App extends React.Component{
       default:
         return <p>No current caregory selected. Try pressing the button or reload the window</p>
     }
-    
   }
 
   /*Utility functions*/
 
-  //to change current category
-  changeCategory = (category) => {
+  //Set current category
+  setCategory = (category) => {
     this.setState({
       currCategory: category.target.value
     })
@@ -222,22 +223,26 @@ class App extends React.Component{
         return null
     }
   }
-  //Add processing class to an element and disable categorybuttons
+  //Add processing class to an element and disable categorybuttons and selected manufacturer's availability fetching buttons
   addProcessing = (elementName, manufacturer)=>{
     let clickedManufacButton = document.querySelectorAll(elementName)
         _.forEach(clickedManufacButton, button =>{
-          if(button.classList.contains(manufacturer)){button.classList.add("processing")}
+          if(button.classList.contains(manufacturer)){
+            button.classList.add("processing"); 
+            button.disabled = true;
+          }
           if(button.classList.contains("categoryButton")){button.disabled = true}
         })
   }
-    //Remove processing class from an element and enable categorybuttons
+    //Remove processing class from an element and enable categorybuttons and selected manufacturer's availability fetching buttons
   removeProcessing = (elementName, manufacturer)=>{
     let clickedManufacButton = document.querySelectorAll(elementName)
         _.forEach(clickedManufacButton, button =>{
-          if(button.classList.contains(manufacturer)){button.classList.remove("processing")}
+          if(button.classList.contains(manufacturer)){button.classList.remove("processing");button.disabled = false }
           if(button.classList.contains("categoryButton")){button.disabled = false}
         })
   }
+/*End of utility functions*/
 
   componentDidMount = () => {
     this.fetchCategories()
@@ -245,25 +250,28 @@ class App extends React.Component{
   render(){
     return(
       <Container>
-        <Row className="buttons">
-          <Col>
-            <Button className="categoryButton" value="beanies" id="getBeaniesButton" onClick={this.changeCategory}>Beanies</Button>
-            <Button className="categoryButton" value="facemasks" id="getFacemasksButton" onClick={this.changeCategory}>Facemasks</Button>
-            <Button className="categoryButton" value="gloves" id="getGlovesButton" onClick={this.changeCategory}>Gloves</Button>
-            {
-              this.state.fetchAVErrorMsg && <span id="avErrorSpan">{this.state.fetchAVErrorMsg}</span>  //Show error message if Availability fetching failed somehow
-            }      
-          </Col>
-        </Row>
+        <Container className="C-B-Container">
+          <h3>Select a category</h3>
+          <Row className="categoryButtons">
+            <Col>
+              <Button className="categoryButton" value="beanies" id="getBeaniesButton" onClick={this.setCategory}>Beanies</Button>
+              <Button className="categoryButton" value="facemasks" id="getFacemasksButton" onClick={this.setCategory}>Facemasks</Button>
+              <Button className="categoryButton" value="gloves" id="getGlovesButton" onClick={this.setCategory}>Gloves</Button>
+              {
+                this.state.fetchAVErrorMsg && <span id="avErrorSpan">{this.state.fetchAVErrorMsg}</span>  //Show error message if Availability fetching failed somehow
+              }      
+            </Col>
+          </Row>
+        </Container>
         <Row className="table">
           <Col>
             {this.state.currCategory == null ? //show error message of category fetching or the table of the categories
             <h3 id="cgErrorH3">{this.state.fetchCGErrorMsg}</h3>
             :
-            <TableData
-              tableHeaders={["ID", "Name of "+this.state.currCategory, "Color(s)", "Price €", "Manufacturer", "Availability"]}
-              categoryData={this.getCategory(this.state.currCategory)} 
-              fetchAvailability={this.fetchAvailability}
+            <TableData 
+              tableHeaders={["ID", "Name of "+this.state.currCategory, "Color(s)", "Price €", "Manufacturer", "Availability"]} //table headers
+              categoryData={this.getCategory(this.state.currCategory)} //category data
+              fetchAvailability={this.fetchAvailability} //passed function for buttons to fetch availability
               />
             }
           </Col>
