@@ -44,7 +44,7 @@ class App extends React.Component{
       }
     }
     categories.forEach((category) => {  
-       axios.get('/v2/products/' + category, config)
+       axios.get('https://bad-api-assignment.reaktor.com/v2/products/' + category, config)
       .then(res=>{
         if(res.status === 200){
           switch(category){
@@ -90,6 +90,8 @@ class App extends React.Component{
     let config = {
       headers: {
         'Access-Control-Allow-Origin': "*",  //for passing CORS policy
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type'
       }
     }
     //reset errormsg
@@ -115,7 +117,7 @@ class App extends React.Component{
     
     if(axiosPass && !clickedButton.classList.contains("processing")){ //Check if axiosPass is true and the clicked button isn't already processing get request
       this.addProcessing("button", manufacturer)
-      axios.get('/v2/availability/'+ manufacturer, config)
+      axios.get('https://bad-api-assignment.reaktor.com/v2/availability/'+ manufacturer, config)
       .then(res => {
 
         //Remove disabled from category buttons and fetching buttons
