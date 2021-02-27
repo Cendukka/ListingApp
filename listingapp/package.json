@@ -2,14 +2,13 @@
   "name": "listingapp",
   "version": "0.1.0",
   "private": true,
-  "//": "for making Axios requests pass CORS policy",
-  "proxy": "https://bad-api-assignment.reaktor.com",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.3",
     "@testing-library/user-event": "^12.6.0",
     "axios": "^0.21.1",
     "bootstrap": "^4.5.3",
+    "http-proxy-middleware": "^1.0.6",
     "react": "^17.0.1",
     "react-bootstrap": "^1.4.3",
     "react-dom": "^17.0.1",
@@ -20,7 +19,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "heroku-postbuild": "npm install --prefix client && npm run build --prefix client"
   },
   "eslintConfig": {
     "extends": [
